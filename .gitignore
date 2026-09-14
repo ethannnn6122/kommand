@@ -25,6 +25,8 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+node_modules
+plans
 
 # Installer logs
 pip-log.txt
@@ -46,6 +48,7 @@ coverage.xml
 cover/
 
 # IDEs and Editors
+.roo
 .idea/
 .vscode/
 *.swp

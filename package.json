@@ -1,0 +1,21 @@
+{
+  "name": "kommand",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev:backend": "npm run dev --workspace=backend",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "build:backend": "npm run build --workspace=backend",
+    "build:frontend": "npm run build --workspace=frontend"
+  },
+  "allowScripts": {
+    "esbuild@0.21.5": true
+  },
+  "devDependencies": {
+    "vite": "^8.3.0"
+  }
+}
