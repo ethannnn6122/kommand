@@ -12,11 +12,7 @@ export const Workloads: React.FC = () => {
     try {
       const data = await fetchWorkloads();
       setWorkloads(data);
-      if (data.length === 0) {
-        setError('No live data stream configured or connected.');
-      } else {
-        setError(null);
-      }
+      setError(null);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch workloads from backend');
     } finally {

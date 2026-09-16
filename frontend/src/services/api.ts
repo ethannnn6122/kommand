@@ -16,6 +16,7 @@ export interface ClusterTelemetry {
     monitorsUp: number;
     monitorsDown: number;
   };
+  sourcesCount: number;
 }
 
 export interface NodeInfo {
@@ -82,6 +83,17 @@ export async function fetchNetDataMetrics(): Promise<any> {
   const response = await fetch(`${API_BASE}/metrics/netdata`);
   if (!response.ok) {
     throw new Error(`Failed to fetch NetData metrics: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+/**
+ * Fetch homelab connection settings
+ */
+export async function fetchHomelabConfig(): Promise<HomelabConfig> {
+  const response = await fetch(`${API_BASE}/settings/homelab`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch homelab configuration: ${response.statusText}`);
   }
   return response.json();
 }

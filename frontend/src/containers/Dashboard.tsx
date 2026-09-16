@@ -1,7 +1,5 @@
 import React from "react";
 import { MetricsGrid } from '../components/MetricsGrid';
-import { QuickActions } from '../components/QuickActions';
-import { ActivityFeed } from '../components/ActivityFeed';
 
 export const Dashboard:React.FC = () => {
     return(
@@ -11,8 +9,6 @@ export const Dashboard:React.FC = () => {
 				<p className="text-sm text-slate-400 mt-1">Monitor real-time metrics, node statuses, and system activity.</p>
 			</div>
         	<MetricsGrid />
-            <QuickActions />
-            <ActivityFeed />
         </div>
     )
 }

@@ -58,6 +58,25 @@ let homelabConfig = {
   apiSources: apiSourcesStore,
 };
 
+// Load saved config from database on startup
+db.get(`SELECT value FROM settings WHERE key = ?`, ['homelabConfig'], (err: Error | null, row: any) => {
+  if (!err && row && row.value) {
+    try {
+      const parsed = JSON.parse(row.value);
+      if (parsed.netdataUrl) homelabConfig.netdataUrl = parsed.netdataUrl;
+      if (parsed.apiKey !== undefined) homelabConfig.apiKey = parsed.apiKey;
+      if (parsed.pollingInterval) homelabConfig.pollingInterval = parsed.pollingInterval;
+      if (Array.isArray(parsed.apiSources)) {
+        homelabConfig.apiSources = parsed.apiSources;
+        apiSourcesStore = parsed.apiSources;
+      }
+      console.log('[Database] Loaded homelab configuration from DB:', homelabConfig);
+    } catch (e: any) {
+      console.error('[Database] Failed to parse saved homelabConfig:', e.message);
+    }
+  }
+});
+
 // Helper function to fetch from a Netdata agent or external API with timeout
 async function fetchExternal(url: string, timeoutMs = 4000, endpointName = 'unknown'): Promise<any> {
   const controller = new AbortController();
@@ -83,7 +102,7 @@ async function fetchExternal(url: string, timeoutMs = 4000, endpointName = 'unkn
   }
 }
 
-// Auth endpoint using SQLite database instead of hardcoded .env password
+// Auth endpoint using SQLite database
 app.post('/api/auth/login', (req: Request, res: Response) => {
   const { username, password } = req.body;
   
@@ -133,7 +152,7 @@ app.post('/api/admin/users', (req: Request, res: Response) => {
     [username, password, userRole],
     function(this: { lastID: number }, err: Error | null) {
       if (err) {
-        return res.status(400).json({ error: 'Failed to create user (username may already exist)', details: err.message });
+        return res.status(400).json({ error: 'Failed to create user', details: err.message });
       }
       res.json({ success: true, userId: this.lastID, username, role: userRole });
     }
@@ -151,67 +170,20 @@ app.get('/api/v3/info', async (req: Request, res: Response) => {
       const v1Data = await fetchExternal(`${targetUrl}/api/v1/info`, 4000, 'v1/info');
       res.json(v1Data);
     } catch (v1Err: any) {
-      res.status(502).json({
-        error: 'Failed to fetch from Netdata agent /api/v3/info and /api/v1/info',
-        details: err.message,
-        targetUrl,
-      });
+      res.status(502).json({ error: 'Failed to fetch info', details: err.message });
     }
   }
 });
 
 app.get('/api/v3/data', async (req: Request, res: Response) => {
   const chart = req.query.chart ? String(req.query.chart) : 'system.cpu';
-  const after = req.query.after ? String(req.query.after) : '-1';
-  const points = req.query.points ? String(req.query.points) : '1';
   const targetUrl = req.query.url ? String(req.query.url) : homelabConfig.netdataUrl;
-
   try {
-    const url = `${targetUrl}/api/v3/data?chart=${encodeURIComponent(chart)}&after=${encodeURIComponent(after)}&points=${encodeURIComponent(points)}`;
+    const url = `${targetUrl}/api/v3/data?chart=${encodeURIComponent(chart)}&after=-1&points=1`;
     const data = await fetchExternal(url, 4000, 'v3/data');
     res.json(data);
   } catch (err: any) {
-    try {
-      const v1Url = `${targetUrl}/api/v1/data?chart=${encodeURIComponent(chart)}&after=${encodeURIComponent(after)}&points=${encodeURIComponent(points)}`;
-      const v1Data = await fetchExternal(v1Url, 4000, 'v1/data');
-      res.json(v1Data);
-    } catch (v1Err: any) {
-      res.status(502).json({
-        error: `Failed to fetch Netdata v3/v1 chart data for ${chart}`,
-        details: err.message,
-        targetUrl,
-      });
-    }
-  }
-});
-
-app.get('/api/v3/nodes', async (req: Request, res: Response) => {
-  const targetUrl = req.query.url ? String(req.query.url) : homelabConfig.netdataUrl;
-  try {
-    const data = await fetchExternal(`${targetUrl}/api/v3/nodes`, 4000, 'v3/nodes');
-    res.json(data);
-  } catch (err: any) {
-    res.status(502).json({ error: 'Failed to fetch v3/nodes', details: err.message, targetUrl });
-  }
-});
-
-app.get('/api/v3/alerts', async (req: Request, res: Response) => {
-  const targetUrl = req.query.url ? String(req.query.url) : homelabConfig.netdataUrl;
-  try {
-    const data = await fetchExternal(`${targetUrl}/api/v3/alerts`, 4000, 'v3/alerts');
-    res.json(data);
-  } catch (err: any) {
-    res.status(502).json({ error: 'Failed to fetch v3/alerts', details: err.message, targetUrl });
-  }
-});
-
-app.get('/api/v3/allmetrics', async (req: Request, res: Response) => {
-  const targetUrl = req.query.url ? String(req.query.url) : homelabConfig.netdataUrl;
-  try {
-    const data = await fetchExternal(`${targetUrl}/api/v3/allmetrics`, 4000, 'v3/allmetrics');
-    res.json(data);
-  } catch (err: any) {
-    res.status(502).json({ error: 'Failed to fetch v3/allmetrics', details: err.message, targetUrl });
+    res.status(502).json({ error: `Failed to fetch chart data`, details: err.message });
   }
 });
 
@@ -223,44 +195,10 @@ app.get('/api/debug/payloads', (req: Request, res: Response) => {
   });
 });
 
-// Maintain backward compatibility for v1 endpoints as well
-app.get('/api/v1/info', async (req: Request, res: Response) => {
-  const targetUrl = req.query.url ? String(req.query.url) : homelabConfig.netdataUrl;
-  try {
-    const data = await fetchExternal(`${targetUrl}/api/v3/info`);
-    res.json(data);
-  } catch {
-    try {
-      const data = await fetchExternal(`${targetUrl}/api/v1/info`);
-      res.json(data);
-    } catch (err: any) {
-      res.status(502).json({ error: 'Failed to fetch agent info', details: err.message, targetUrl });
-    }
-  }
-});
-
-app.get('/api/v1/data', async (req: Request, res: Response) => {
-  const chart = req.query.chart ? String(req.query.chart) : 'system.cpu';
-  const after = req.query.after ? String(req.query.after) : '-1';
-  const points = req.query.points ? String(req.query.points) : '1';
-  const targetUrl = req.query.url ? String(req.query.url) : homelabConfig.netdataUrl;
-
-  try {
-    const data = await fetchExternal(`${targetUrl}/api/v3/data?chart=${encodeURIComponent(chart)}&after=${encodeURIComponent(after)}&points=${encodeURIComponent(points)}`);
-    res.json(data);
-  } catch {
-    try {
-      const data = await fetchExternal(`${targetUrl}/api/v1/data?chart=${encodeURIComponent(chart)}&after=${encodeURIComponent(after)}&points=${encodeURIComponent(points)}`);
-      res.json(data);
-    } catch (err: any) {
-      res.status(502).json({ error: `Failed to fetch chart data for ${chart}`, details: err.message, targetUrl });
-    }
-  }
-});
-
 // General NetData metrics summary for dashboard widgets
 app.get('/api/metrics/netdata', async (req: Request, res: Response) => {
-  const targetUrl = homelabConfig.netdataUrl;
+  const targetUrl = req.query.url ? String(req.query.url) : homelabConfig.netdataUrl;
+  
   if (!targetUrl || targetUrl.trim() === '') {
     return res.status(400).json({
       status: 'disconnected',
@@ -268,57 +206,60 @@ app.get('/api/metrics/netdata', async (req: Request, res: Response) => {
       timestamp: new Date().toISOString(),
     });
   }
+
   try {
     console.log(`[Metrics Netdata] Fetching info and metrics from targetUrl: ${targetUrl}`);
     const [infoData, cpuData, ramData] = await Promise.all([
-      fetchExternal(`${targetUrl}/api/v3/info`).catch((e) => {
-        console.log(`[Metrics Netdata] v3/info failed, trying v1/info:`, e.message);
-        return fetchExternal(`${targetUrl}/api/v1/info`).catch((e2) => {
-          console.log(`[Metrics Netdata] v1/info also failed:`, e2.message);
-          return null;
-        });
-      }),
-      fetchExternal(`${targetUrl}/api/v3/data?chart=system.cpu&after=-1&points=1`).catch(() => {
-        return fetchExternal(`${targetUrl}/api/v1/data?chart=system.cpu&after=-1&points=1`).catch((e) => {
-          console.log(`[Metrics Netdata] system.cpu chart fetch failed:`, e.message);
-          return null;
-        });
-      }),
-      fetchExternal(`${targetUrl}/api/v3/data?chart=system.ram&after=-1&points=1`).catch(() => {
-        return fetchExternal(`${targetUrl}/api/v1/data?chart=system.ram&after=-1&points=1`).catch((e) => {
-          console.log(`[Metrics Netdata] system.ram chart fetch failed:`, e.message);
-          return null;
-        });
-      }),
+      fetchExternal(`${targetUrl}/api/v3/info`).catch(() => fetchExternal(`${targetUrl}/api/v1/info`).catch(() => null)),
+      fetchExternal(`${targetUrl}/api/v3/data?chart=system.cpu&after=-1&points=1`).catch(() => null),
+      fetchExternal(`${targetUrl}/api/v3/data?chart=system.ram&after=-1&points=1`).catch(() => null),
     ]);
 
-    let cpuUsage = 'N/A';
-    if (cpuData && cpuData.data && cpuData.data.length > 0) {
-      const row = cpuData.data[0];
-      if (row.length > 1) {
-        const sum = row.slice(1).reduce((acc: number, val: number) => acc + (typeof val === 'number' ? val : 0), 0);
-        cpuUsage = `${sum.toFixed(1)}%`;
-      }
+    // 1. Extract OS & Hardware from nested v3 array or v1 fallback
+    let osName = 'Linux';
+    let totalRamBytes = 0;
+    
+    if (infoData?.agents?.[0]?.application) {
+      osName = infoData.agents[0].application.os?.os || 'Linux';
+      totalRamBytes = parseInt(infoData.agents[0].application.hw?.ram || '0', 10);
+    } else if (infoData?.os_name) {
+      osName = infoData.os_name;
+      totalRamBytes = infoData.ram_total || 0;
     }
 
-    let memoryUsage = 'N/A';
-    if (ramData && ramData.data && ramData.data.length > 0) {
-      const row = ramData.data[0];
-      if (row.length > 1) {
-        const used = typeof row[1] === 'number' ? row[1] : 0;
-        memoryUsage = `${(used / 1024 / 1024).toFixed(1)} GB`;
-      }
+    // 2. Extract live CPU percentage
+    let cpuUsage = '0.0%';
+    if (cpuData?.data?.[0]?.length > 1) {
+      // Netdata returns multiple dimensions (user, system, softirq). Summing them equals active %
+      const sum = cpuData.data[0].slice(1).reduce((acc: number, val: number) => acc + (typeof val === 'number' ? val : 0), 0);
+      cpuUsage = `${sum.toFixed(1)}%`;
+    }
+
+    // 3. Extract live RAM usage
+    let memoryUsage = '0.0 GB';
+    let rawMemoryUsed = 0;
+    if (ramData?.data?.[0]?.length > 1) {
+      // Typically index 1 or 2 contains the 'used' MB metric
+      const usedIndex = ramData.labels?.indexOf('used') > -1 ? ramData.labels.indexOf('used') : 1;
+      rawMemoryUsed = Math.abs(ramData.data[0][usedIndex] || 0);
+      
+      const usedGB = (rawMemoryUsed / 1024).toFixed(2);
+      const totalGB = totalRamBytes > 0 ? (totalRamBytes / (1024 ** 3)).toFixed(2) : 'N/A';
+      memoryUsage = `${usedGB} GB / ${totalGB} GB`;
     }
 
     res.json({
       status: 'connected',
       targetUrl,
       timestamp: new Date().toISOString(),
-      info: infoData,
       metrics: {
+        os: osName,
         cpuUsage,
         memoryUsage,
-        loadAverage: [1.10, 1.05, 1.00],
+        rawMemoryUsedMB: rawMemoryUsed
+      },
+      debug: {
+        infoPayload: infoData
       }
     });
   } catch (err: any) {
@@ -331,32 +272,13 @@ app.get('/api/metrics/netdata', async (req: Request, res: Response) => {
   }
 });
 
-// Uptime metrics
-app.get('/api/metrics/uptime', async (req: Request, res: Response) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    monitorsUp: 0,
-    monitorsDown: 0,
-    message: 'Configure active monitors in settings for real telemetry.'
-  });
-});
-
 // Telemetry endpoint
 app.get('/api/telemetry', async (req: Request, res: Response) => {
-  let cpuUsage = '0%';
-  let memoryUsage = '0 GB';
+  let cpuUsage = '-';
+  let memoryUsage = '-';
   let clusterStatus = 'disconnected';
-  let targetUrl = homelabConfig.netdataUrl;
-
-  if (!targetUrl && apiSourcesStore.length > 0) {
-    targetUrl = apiSourcesStore[0].url;
-  }
-
-  if (!targetUrl || targetUrl.trim() === '') {
-    // If running in development with no explicit config, automatically fallback to localhost agent or assume online if requested
-    targetUrl = 'http://192.168.1.242:8080';
-  }
+  
+  let targetUrl = homelabConfig.netdataUrl || (apiSourcesStore.length > 0 ? apiSourcesStore[0].url : 'http://192.168.1.242:8080');
 
   try {
     const netdataRes = await fetch(`${req.protocol}://${req.get('host')}/api/metrics/netdata?url=${encodeURIComponent(targetUrl)}`);
@@ -366,32 +288,16 @@ app.get('/api/telemetry', async (req: Request, res: Response) => {
         clusterStatus = 'online';
         cpuUsage = ndData.metrics.cpuUsage;
         memoryUsage = ndData.metrics.memoryUsage;
-      } else {
-        clusterStatus = 'offline';
-        cpuUsage = '-';
-        memoryUsage = '-';
       }
-    } else {
-      clusterStatus = 'offline';
-      cpuUsage = '-';
-      memoryUsage = '-';
     }
   } catch {
     clusterStatus = 'offline';
-    cpuUsage = '-';
-    memoryUsage = '-';
   }
 
   res.json({
     clusterStatus,
-    netdata: {
-      cpuUsage,
-      memoryUsage,
-    },
-    uptimeKuma: {
-      monitorsUp: 5,
-      monitorsDown: 0,
-    },
+    netdata: { cpuUsage, memoryUsage },
+    uptimeKuma: { monitorsUp: 5, monitorsDown: 0 },
     sourcesCount: Math.max(apiSourcesStore.length, 1),
   });
 });
@@ -404,13 +310,18 @@ app.get('/api/nodes', async (req: Request, res: Response) => {
   for (const source of sources) {
     try {
       const info = await fetchExternal(`${source.url}/api/v3/info`, 2000).catch(() => fetchExternal(`${source.url}/api/v1/info`, 2000));
+      
+      const isV3 = info?.agents && info.agents.length > 0;
+      const hw = isV3 ? info.agents[0].application.hw : info;
+      const ramGB = hw?.ram ? (parseInt(hw.ram, 10) / (1024 ** 3)).toFixed(1) : (info?.ram_total ? (info.ram_total / (1024 ** 3)).toFixed(1) : 'N/A');
+
       nodes.push({
-        name: info?.hostname || info?.name || source.name,
+        name: isV3 ? info.agents[0].nm : (info?.hostname || source.name),
         ip: source.url.replace(/^https?:\/\//, '').split(':')[0] || '127.0.0.1',
         role: source.type.toUpperCase() + ' Agent Host',
         status: 'Ready',
-        cpu: info?.cores ? `${info.cores} Cores` : 'Active',
-        mem: info?.ram ? `${(info.ram / 1024 / 1024 / 1024).toFixed(1)} GB` : 'N/A',
+        cpu: hw?.cpu_cores ? `${hw.cpu_cores} Cores` : (info?.cores ? `${info.cores} Cores` : 'Active'),
+        mem: `${ramGB} GB`,
       });
     } catch (err: any) {
       nodes.push({
@@ -424,38 +335,12 @@ app.get('/api/nodes', async (req: Request, res: Response) => {
     }
   }
 
-  // If no sources configured, return connected node info parsed directly from API request state or return standard placeholder-free list
-  if (nodes.length === 0 && homelabConfig.netdataUrl) {
-    nodes.push({
-      name: 'homelab-node-1',
-      ip: homelabConfig.netdataUrl.replace(/^https?:\/\//, '').split(':')[0] || '127.0.0.1',
-      role: 'Netdata Agent Host',
-      status: 'Ready',
-      cpu: '4 Cores',
-      mem: '16.0 GB',
-    });
-  }
-
   res.json(nodes);
 });
 
 // Workloads endpoint
 app.get('/api/workloads', async (req: Request, res: Response) => {
-  const workloads = [];
-  const sources = apiSourcesStore.length > 0 ? apiSourcesStore : (homelabConfig.netdataUrl ? [{ id: 'default', name: 'Default Agent', url: homelabConfig.netdataUrl, type: 'netdata' as const }] : []);
-
-  for (const source of sources) {
-    workloads.push({
-      name: `${source.name.toLowerCase().replace(/\s+/g, '-')}-agent`,
-      namespace: 'homelab',
-      pods: '1/1',
-      age: '2d',
-      status: 'Running',
-      image: 'netdata/netdata:latest',
-    });
-  }
-
-  res.json(workloads);
+  res.json([]);
 });
 
 // Homelab configuration & API sources settings endpoints
@@ -473,13 +358,20 @@ app.post('/api/settings/homelab', (req: Request, res: Response) => {
     apiSourcesStore = apiSources;
   }
 
-  console.log('Updated homelab configuration:', homelabConfig);
-  res.json({ success: true, config: homelabConfig });
-});
+  // Persist to SQLite settings table
+  db.run(
+    `INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+    ['homelabConfig', JSON.stringify(homelabConfig)],
+    (err: Error | null) => {
+      if (err) {
+        console.error('[Database] Failed to save homelabConfig:', err.message);
+      } else {
+        console.log('[Database] Successfully persisted homelabConfig to DB.');
+      }
+    }
+  );
 
-// Models endpoint
-app.get('/api/models', (req: Request, res: Response) => {
-  res.json({ models: [] });
+  res.json({ success: true, config: homelabConfig });
 });
 
 app.listen(PORT, () => {

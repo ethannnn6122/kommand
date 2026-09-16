@@ -12,11 +12,7 @@ export const Nodes: React.FC = () => {
     try {
       const data = await fetchNodes();
       setNodes(data);
-      if (data.length === 0) {
-        setError('No live data stream configured or connected.');
-      } else {
-        setError(null);
-      }
+      setError(null);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch node list from backend');
     } finally {
