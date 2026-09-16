@@ -7,6 +7,22 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
+  const [clusterStatus, setClusterStatus] = React.useState<string>('disconnected');
+
+  React.useEffect(() => {
+    import('../services/api').then(({ fetchTelemetry }) => {
+      fetchTelemetry()
+        .then((data: any) => {
+          if (data.clusterStatus === 'online') {
+            setClusterStatus('online');
+          } else {
+            setClusterStatus('disconnected');
+          }
+        })
+        .catch(() => setClusterStatus('disconnected'));
+    });
+  }, []);
+
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'nodes', label: 'Nodes', icon: Server },
@@ -46,8 +62,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
         <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-700/50">
           <p className="text-xs text-slate-400">Cluster Status</p>
           <div className="flex items-center space-x-2 mt-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="text-sm font-semibold text-emerald-400">All Systems Normal</span>
+            <span className={`w-2 h-2 rounded-full ${clusterStatus === 'online' ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`}></span>
+            <span className={`text-sm font-semibold ${clusterStatus === 'online' ? 'text-emerald-400' : 'text-red-400'}`}>
+              {clusterStatus === 'online' ? 'All Systems Normal' : 'Offline / Disconnected'}
+            </span>
           </div>
         </div>
       </div>

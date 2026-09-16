@@ -14,22 +14,11 @@ export const Header: React.FC = () => {
           />
         </div>
       </div>
-
       <div className="flex items-center space-x-4">
         <button className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition-colors relative">
           <Bell className="w-5 h-5" />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-indigo-500 rounded-full"></span>
         </button>
-
-        <div className="flex items-center space-x-3 pl-4 border-l border-slate-800">
-          <div className="w-10 h-10 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold">
-            AD
-          </div>
-          <div className="hidden md:block">
-            <p className="text-sm font-semibold text-white">Admin User</p>
-            <p className="text-xs text-slate-400">admin@kommand.io</p>
-          </div>
-        </div>
       </div>
     </header>
   );

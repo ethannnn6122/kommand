@@ -1,87 +1,121 @@
-import React from 'react';
-import { User, Shield, Bell, Key, Globe, Database } from 'lucide-react';
+import React, { useState } from 'react';
+import { Database } from 'lucide-react';
+import { saveHomelabConfig } from '../services/api';
 
 export const Settings: React.FC = () => {
+  const [netdataUrl, setNetdataUrl] = useState<string>('');
+  const [apiKey, setApiKey] = useState<string>('');
+  const [pollingInterval, setPollingInterval] = useState<number>(5000);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const handleSaveHomelab = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setStatusMessage(null);
+    try {
+      const response = await saveHomelabConfig({
+        netdataUrl,
+        apiKey,
+        pollingInterval,
+      });
+      if (response.success) {
+        setStatusMessage({ type: 'success', text: 'Homelab & NetData configuration updated successfully!' });
+      } else {
+        setStatusMessage({ type: 'error', text: 'Failed to update configuration.' });
+      }
+    } catch (err: any) {
+      setStatusMessage({ type: 'error', text: err.message || 'Failed to save configuration.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
         <h1 className="text-2xl font-bold text-white tracking-tight">Settings</h1>
-        <p className="text-sm text-slate-400 mt-1">Manage cluster preferences, security keys, and user profiles</p>
+        <p className="text-sm text-slate-400 mt-1">Configure data stream and telemetry source connection details</p>
       </div>
 
-      <div className="bg-slate-900 border border-slate-800 rounded-xl divide-y divide-slate-800">
-        <div className="p-6 flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20 text-indigo-400">
-              <Globe className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-white">Cluster Region</h3>
-              <p className="text-xs text-slate-400">Primary cloud provider region for worker nodes</p>
-            </div>
+      {statusMessage && (
+        <div className={`p-4 rounded-lg text-sm border ${
+          statusMessage.type === 'success'
+            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+            : 'bg-red-500/10 border-red-500/20 text-red-400'
+        }`}>
+          {statusMessage.text}
+        </div>
+      )}
+
+      {/* Homelab & NetData Connection panel */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-6">
+        <div className="flex items-center space-x-4 border-b border-slate-800 pb-4">
+          <div className="p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20 text-indigo-400">
+            <Database className="w-6 h-6" />
           </div>
-          <select className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2 outline-none">
-            <option>us-west-2 (Oregon)</option>
-            <option>us-east-1 (N. Virginia)</option>
-            <option>eu-central-1 (Frankfurt)</option>
-          </select>
+          <div>
+            <h2 className="text-lg font-bold text-white">Homelab & NetData Configuration Data</h2>
+            <p className="text-xs text-slate-400">Configure connection details for your local homelab nodes and NetData server agents</p>
+          </div>
         </div>
 
-        <div className="p-6 flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20 text-indigo-400">
-              <Shield className="w-5 h-5" />
-            </div>
+        <form onSubmit={handleSaveHomelab} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <h3 className="text-sm font-semibold text-white">Audit Logging</h3>
-              <p className="text-xs text-slate-400">Record all Kubernetes API requests for security compliance</p>
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                NetData Host Agent / Server URL
+              </label>
+              <input
+                type="url"
+                value={netdataUrl}
+                onChange={(e) => setNetdataUrl(e.target.value)}
+                placeholder="e.g. http://192.168.1.100:19999"
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                API Key (Optional)
+              </label>
+              <input
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="Bearer or Custom Token"
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+              />
             </div>
           </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" defaultChecked className="sr-only peer" />
-            <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-          </label>
-        </div>
 
-        <div className="p-6 flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20 text-indigo-400">
-              <Bell className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-white">Slack Notifications</h3>
-              <p className="text-xs text-slate-400">Send cluster alerts and deployment updates to Slack</p>
-            </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+              Metrics Polling Interval (ms)
+            </label>
+            <select
+              value={pollingInterval}
+              onChange={(e) => setPollingInterval(Number(e.target.value))}
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+            >
+              <option value={1000}>1,000 ms (Real-time)</option>
+              <option value={2000}>2,000 ms</option>
+              <option value={5000}>5,000 ms (Recommended)</option>
+              <option value={10000}>10,000 ms</option>
+            </select>
           </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" defaultChecked className="sr-only peer" />
-            <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-          </label>
-        </div>
 
-        <div className="p-6 flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20 text-indigo-400">
-              <Key className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-white">API Access Tokens</h3>
-              <p className="text-xs text-slate-400">Manage programmatic access credentials for CI/CD pipelines</p>
-            </div>
+          <div className="flex justify-end pt-2">
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-600/50 text-white font-medium rounded-lg text-sm transition-colors shadow-lg shadow-indigo-600/25"
+            >
+              {loading ? 'Saving Connections...' : 'Save and Connect'}
+            </button>
           </div>
-          <button className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-            Manage Keys
-          </button>
-        </div>
-      </div>
-
-      <div className="flex justify-end space-x-4">
-        <button className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-lg text-sm transition-colors">
-          Cancel
-        </button>
-        <button className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg text-sm transition-colors shadow-lg shadow-indigo-600/25">
-          Save Changes
-        </button>
+        </form>
       </div>
     </div>
   );
