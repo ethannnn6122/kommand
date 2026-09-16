@@ -77,7 +77,7 @@ export const Workloads: React.FC = () => {
         </div>
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
           <span className="text-sm text-slate-400">Ingress Routes</span>
-          <div className="text-3xl font-bold text-white mt-4">{error ? '—' : '5'}</div>
+          <div className="text-3xl font-bold text-white mt-4">{error ? '—' : '-'}</div>
         </div>
       </div>
 

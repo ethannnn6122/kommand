@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Terminal, Server, Cpu, Settings, Bell, Search, User } from 'lucide-react';
+import { LayoutDashboard, Terminal, Server, Cpu, Settings, Code2 } from 'lucide-react';
 
 interface SidebarProps {
   activeTab: string;
@@ -27,6 +27,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'nodes', label: 'Nodes', icon: Server },
     { id: 'workloads', label: 'Workloads', icon: Cpu },
+    { id: 'dev-inspector', label: 'Dev Payload Inspector', icon: Code2 },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 

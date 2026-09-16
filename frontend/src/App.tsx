@@ -5,6 +5,7 @@ import { Dashboard } from './containers/Dashboard';
 import { Nodes } from './containers/Nodes';
 import { Workloads } from './containers/Workloads';
 import { Settings } from './containers/Settings';
+import { DevPayloadInspector } from './components/DevPayloadInspector';
 
 export function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -17,6 +18,8 @@ export function App() {
         return <Nodes />;
       case 'workloads':
         return <Workloads />;
+      case 'dev-inspector':
+        return <DevPayloadInspector />;
       case 'settings':
         return <Settings />;
       default:

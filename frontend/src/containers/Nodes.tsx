@@ -65,7 +65,7 @@ export const Nodes: React.FC = () => {
           </div>
           <div className="text-3xl font-bold text-white mt-4">{error ? '—' : (loading && nodes.length === 0 ? '...' : nodes.length)}</div>
           <span className={`text-xs mt-2 inline-block ${error ? 'text-red-400' : 'text-emerald-400'}`}>
-            {error ? 'Offline' : '100% Healthy'}
+            {error ? 'Offline' : '?% Healthy'}
           </span>
         </div>
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
@@ -73,7 +73,7 @@ export const Nodes: React.FC = () => {
             <span className="text-sm text-slate-400">CPU Allocation</span>
             <Shield className="w-5 h-5 text-emerald-400" />
           </div>
-          <div className="text-3xl font-bold text-white mt-4">{error ? '—' : '51.5%'}</div>
+          <div className="text-3xl font-bold text-white mt-4">{error ? '—' : '%'}</div>
           <span className="text-xs text-slate-400 mt-2 inline-block">Average CPU utilization</span>
         </div>
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
@@ -81,7 +81,7 @@ export const Nodes: React.FC = () => {
             <span className="text-sm text-slate-400">Memory Usage</span>
             <HardDrive className="w-5 h-5 text-purple-400" />
           </div>
-          <div className="text-3xl font-bold text-white mt-4">{error ? '—' : '61.2%'}</div>
+          <div className="text-3xl font-bold text-white mt-4">{error ? '—' : '%'}</div>
           <span className="text-xs text-slate-400 mt-2 inline-block">Average memory allocation</span>
         </div>
       </div>

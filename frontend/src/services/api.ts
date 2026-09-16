@@ -102,3 +102,63 @@ export async function saveHomelabConfig(config: HomelabConfig): Promise<{ succes
   }
   return response.json();
 }
+
+/**
+ * Fetch NetData v3 Info
+ */
+export async function fetchNetDataV3Info(url?: string): Promise<any> {
+  const query = url ? `?url=${encodeURIComponent(url)}` : '';
+  const response = await fetch(`${API_BASE}/v3/info${query}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch Netdata v3 info: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+/**
+ * Fetch NetData v3 Nodes
+ */
+export async function fetchNetDataV3Nodes(url?: string): Promise<any> {
+  const query = url ? `?url=${encodeURIComponent(url)}` : '';
+  const response = await fetch(`${API_BASE}/v3/nodes${query}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch Netdata v3 nodes: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+/**
+ * Fetch NetData v3 Alerts
+ */
+export async function fetchNetDataV3Alerts(url?: string): Promise<any> {
+  const query = url ? `?url=${encodeURIComponent(url)}` : '';
+  const response = await fetch(`${API_BASE}/v3/alerts${query}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch Netdata v3 alerts: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+/**
+ * Fetch NetData v3 Chart Data
+ */
+export async function fetchNetDataV3Data(chart = 'system.cpu', after = '-1', points = '1', url?: string): Promise<any> {
+  const params = new URLSearchParams({ chart, after, points });
+  if (url) params.append('url', url);
+  const response = await fetch(`${API_BASE}/v3/data?${params.toString()}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch Netdata v3 data for ${chart}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+/**
+ * Fetch Debug Payload Inspector logs
+ */
+export async function fetchDebugPayloads(): Promise<any> {
+  const response = await fetch(`${API_BASE}/debug/payloads`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch debug payload logs: ${response.statusText}`);
+  }
+  return response.json();
+}

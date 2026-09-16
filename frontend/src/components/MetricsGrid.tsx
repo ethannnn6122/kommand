@@ -14,6 +14,7 @@ export const MetricsGrid: React.FC = () => {
         const data = await fetchTelemetry() as any;
         if (data.clusterStatus === 'online') {
           setTelemetry(data);
+          console.log(telemetry)
           setStatus('online');
           setError(null);
         } else {
@@ -40,7 +41,7 @@ export const MetricsGrid: React.FC = () => {
   const metrics = [
     {
       title: 'Active Nodes',
-      value: isConnected ? '4 / 4' : 'Disconnected',
+      value: isConnected ? '? / ?' : 'Disconnected',
       change: isConnected ? '+0%' : 'No Data',
       trend: 'neutral',
       icon: Server,
@@ -50,7 +51,7 @@ export const MetricsGrid: React.FC = () => {
     {
       title: 'CPU Utilization (NetData)',
       value: isConnected ? telemetry.netdata.cpuUsage : 'Disconnected',
-      change: isConnected ? '+4.2%' : 'No Data',
+      change: isConnected ? '?%' : 'No Data',
       trend: 'up',
       icon: Cpu,
       color: isConnected ? 'text-emerald-400' : 'text-slate-500',
@@ -59,7 +60,7 @@ export const MetricsGrid: React.FC = () => {
     {
       title: 'Memory Usage (NetData)',
       value: isConnected ? telemetry.netdata.memoryUsage : 'Disconnected',
-      change: isConnected ? '-1.5%' : 'No Data',
+      change: isConnected ? '?%' : 'No Data',
       trend: 'down',
       icon: HardDrive,
       color: isConnected ? 'text-amber-400' : 'text-slate-500',
@@ -68,7 +69,7 @@ export const MetricsGrid: React.FC = () => {
     {
       title: 'Monitors Up / Down',
       value: isConnected ? `${telemetry.uptimeKuma.monitorsUp} / ${telemetry.uptimeKuma.monitorsDown}` : 'Disconnected',
-      change: isConnected ? '100% Up' : 'No Data',
+      change: isConnected ? '?% Up' : 'No Data',
       trend: 'up',
       icon: Activity,
       color: isConnected ? 'text-cyan-400' : 'text-slate-500',
